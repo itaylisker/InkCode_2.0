@@ -139,11 +139,6 @@ public class DigitRecognizerGUI extends JFrame {
         }
     }
 
-    public static BufferedImage resizeImage(BufferedImage originalImage, int width, int height) {
-        BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
-        resizedImage.getGraphics().drawImage(originalImage, 0, 0, width, height, null);
-        return resizedImage;
-    }
 
     // Convert image to 28x28 grayscale feature array
     private double[] extractFeatures(BufferedImage img) throws IOException {
