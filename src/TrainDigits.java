@@ -42,10 +42,10 @@ public class TrainDigits {
             double[][] testFeatures = MNISTLoader.loadFeatures(mnistTestPath);
             int[] testLabels = MNISTLoader.loadLabels(mnistTestPath);
 
-            BufferedImage recreatedImage = recreateImage(testFeatures[10],28,28);
-            File output = new File("recreated_image.png");
-            ImageIO.write(recreatedImage, "png", output);
-            System.out.println("Recreated image saved as recreated_image.png");
+//            BufferedImage recreatedImage = recreateImage(testFeatures[10],28,28);
+//            File output = new File("recreated_image.png");
+//            ImageIO.write(recreatedImage, "png", output);
+//            System.out.println("Recreated image saved as recreated_image.png");
 
             // Train perceptrons
             for (int digit = 0; digit < numDigits; digit++) {

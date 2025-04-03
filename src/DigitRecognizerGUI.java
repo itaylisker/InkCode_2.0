@@ -61,12 +61,11 @@ public class DigitRecognizerGUI extends JFrame {
                         int counter = 0;
                         String displayedText = "Predicted Digits: ";
                         for (int i = 0; i < 10; i++){
-                            System.out.println(predictedDigits[i]);
                             if (predictedDigits[i] > 0){
                                 System.out.println("gothereeeeeeeeeeeeeeeeeeeeeeeeeeeee");
                                 counter++;
-                                displayedText += i + ", ";
-                                System.out.println(displayedText);
+                                displayedText += i + ",";
+                                System.out.println(displayedText + "  counter is: " + counter);
                             }
                         }
                         if (counter > 0){
@@ -139,28 +138,37 @@ public class DigitRecognizerGUI extends JFrame {
         }
     }
 
+    public static BufferedImage resizeImage(BufferedImage originalImage, int width, int height) {
+        BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        resizedImage.getGraphics().drawImage(originalImage, 0, 0, width, height, null);
+        return resizedImage;
+    }
 
     // Convert image to 28x28 grayscale feature array
-    private double[] extractFeatures(BufferedImage img) throws IOException {
-        int width = 28, height = 28;
-        BufferedImage resized = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
-        Graphics2D g = resized.createGraphics();
-        g.drawImage(img, 0, 0, width, height, null);
-        g.dispose();
+    public static double[] extractFeatures(BufferedImage image) throws IOException {
+        // Resize the image to 28x28
+        BufferedImage resizedImage = resizeImage(image, 28, 28);
 
-        double[] features = new double[width * height];
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int pixel = resized.getRGB(x, y) & 0xFF; // Grayscale intensity
-                features[y * width + x] = pixel / 255.0; // Normalize to [0,1]
+        // Flatten and normalize the pixel values
+        double[] features = new double[28 * 28];
+        int index = 0;
+
+        for (int y = 0; y < resizedImage.getHeight(); y++) {
+            for (int x = 0; x < resizedImage.getWidth(); x++) {
+                // Get pixel value as grayscale
+                int rgb = resizedImage.getRGB(x, y);
+                Color color = new Color(rgb);
+
+                // Convert to grayscale intensity (average of R, G, and B)
+                double grayscale = (color.getRed() + color.getGreen() + color.getBlue()) / 3.0;
+
+                // Normalize to range [0, 1]
+                features[index++] = grayscale / 255.0;
             }
         }
-
         BufferedImage recreatedImage = recreateImage(features, 28, 28);
         File output = new File("recreated_image.png");
         ImageIO.write(recreatedImage, "png", output);
-        System.out.println("Recreated image saved as recreated_image.png");
-
         return features;
     }
 
