@@ -6,6 +6,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.util.Arrays;
 import javax.imageio.ImageIO;
 
@@ -13,9 +15,9 @@ public class DigitRecognizerGUI extends JFrame {
     private JLabel imageLabel;
     private JButton uploadButton, predictButton;
     private File selectedFile;
-    private Perceptron[] perceptrons; // Array of perceptrons for digits 0-9
+    private MLP[] perceptrons; // Array of perceptrons for digits 0-9
 
-    public DigitRecognizerGUI(Perceptron[] trainedPerceptrons) {
+    public DigitRecognizerGUI(MLP[] trainedPerceptrons) {
         this.perceptrons = trainedPerceptrons;
 
         setTitle("Handwritten Digit Recognizer");
@@ -55,7 +57,7 @@ public class DigitRecognizerGUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (selectedFile != null) {
-                    int[] predictedDigits = predictDigit(selectedFile);
+                    double[] predictedDigits = predictDigit(selectedFile);
                     System.out.println(Arrays.toString(predictedDigits));
                     if (predictedDigits[0] > -1){
                         int counter = 0;
@@ -112,8 +114,8 @@ public class DigitRecognizerGUI extends JFrame {
     }
 
     // Predict digit from uploaded image
-    private int[] predictDigit(File file) {
-        int[] predictions = new int[11];
+    private double[] predictDigit(File file) {
+        double[] predictions = new double[11];
         try {
             BufferedImage img = ImageIO.read(file);
             double[] features = extractFeatures(img);
@@ -121,7 +123,8 @@ public class DigitRecognizerGUI extends JFrame {
             double bestScore = Double.NEGATIVE_INFINITY;
 
             for (int digit = 0; digit < 10; digit++) {
-                int score = perceptrons[digit].predict(features);
+                double[] hiddenLayer = new double[perceptrons[digit].GetHiddenSize()];
+                double score = perceptrons[digit].forward(features, hiddenLayer);
 
                 predictions[digit] = score;
 
@@ -173,16 +176,19 @@ public class DigitRecognizerGUI extends JFrame {
     }
 
 
+
+
     public static void main(String[] args) {
         // Load trained perceptrons (assumes they are already trained)
         int numFeatures = 28 * 28;
         int numDigits = 10;
-        Perceptron[] perceptrons = new Perceptron[numDigits];
+        MLP[] models = new MLP[10];
         for (int i = 0; i < numDigits; i++) {
-            perceptrons[i] = new Perceptron(numFeatures, 0.01);
-            perceptrons[i].loadWeights("weights_digit_" + i + ".txt"); // Load weights from file
+            models[i] = new MLP(numFeatures, 128, 0.01);
+            models[i].loadWeights("mlp_digit_" + i + ".txt"); // Load weights from file
         }
 
-        new DigitRecognizerGUI(perceptrons);
+        new DigitRecognizerGUI(models);
     }
 }
+
