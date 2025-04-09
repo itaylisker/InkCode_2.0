@@ -5,10 +5,8 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.util.Arrays;
+import java.util.*;
+import java.util.List;
 import javax.imageio.ImageIO;
 
 public class DigitRecognizerGUI extends JFrame {
@@ -16,6 +14,72 @@ public class DigitRecognizerGUI extends JFrame {
     private JButton uploadButton, predictButton;
     private File selectedFile;
     private MLP[] perceptrons; // Array of perceptrons for digits 0-9
+
+    public static void printSortedIndexValueMap(double[] array) {
+        // Create a map of index -> value
+        Map<Integer, Double> indexValueMap = new HashMap<>();
+        for (int i = 0; i < array.length; i++) {
+            indexValueMap.put(i, array[i]);
+        }
+
+        // Sort entries by value (ascending)
+        List<Map.Entry<Integer, Double>> sortedEntries = new ArrayList<>(indexValueMap.entrySet());
+        sortedEntries.sort(Map.Entry.comparingByValue());
+
+        // Print nicely
+        System.out.println("Sorted Index -> Value Map:");
+        for (Map.Entry<Integer, Double> entry : sortedEntries) {
+            System.out.printf("Index %d: %.4f\n", entry.getKey(), entry.getValue());
+        }
+    }
+
+    public static BufferedImage centerDigit(BufferedImage input) throws IOException {
+            int width = input.getWidth();
+            int height = input.getHeight();
+
+            // Step 1: Find bounding box of the digit
+            int top = height, bottom = 0, left = width, right = 0;
+
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    int rgb = input.getRGB(x, y);
+                    if (!isWhite(rgb)) {
+                        top = Math.min(top, y);
+                        bottom = Math.max(bottom, y);
+                        left = Math.min(left, x);
+                        right = Math.max(right, x);
+                    }
+                }
+            }
+
+            // Handle blank images
+            if (top > bottom || left > right) return input;
+
+            // Step 2: Crop the digit
+            BufferedImage digit = input.getSubimage(left, top, right - left + 1, bottom - top + 1);
+// Step 3: Create a new white image
+            BufferedImage centered = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = centered.createGraphics();
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, width, height);
+
+            // Step 4: Draw the digit centered
+            int offsetX = (width - digit.getWidth()) / 2;
+            int offsetY = (height - digit.getHeight()) / 2;
+            g.drawImage(digit, offsetX, offsetY, null);
+            g.dispose();
+
+            return centered;
+        }
+
+        private static boolean isWhite(int rgb) {
+            Color color = new Color(rgb, true);
+            return color.getAlpha() > 250 &&
+                    color.getRed() > 250 &&
+                    color.getGreen() > 250 &&
+                    color.getBlue() > 250;
+    }
+
 
     public DigitRecognizerGUI(MLP[] trainedPerceptrons) {
         this.perceptrons = trainedPerceptrons;
@@ -57,33 +121,20 @@ public class DigitRecognizerGUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (selectedFile != null) {
-                    double[] predictedDigits = predictDigit(selectedFile);
-                    System.out.println(Arrays.toString(predictedDigits));
-                    if (predictedDigits[0] > -1){
-                        int counter = 0;
-                        String displayedText = "Predicted Digits: ";
-                        for (int i = 0; i < 10; i++){
-                            if (predictedDigits[i] > 0){
-                                System.out.println("gothereeeeeeeeeeeeeeeeeeeeeeeeeeeee");
-                                counter++;
-                                displayedText += i + ",";
-                                System.out.println(displayedText + "  counter is: " + counter);
-                            }
-                        }
-                        if (counter > 0){
-                            displayedText = displayedText.substring(0,17+counter*2);
-                            System.out.println(displayedText);
-
-                        }
-                        else{
-                            displayedText = "couldn't predict number";
-                        }
-                        JOptionPane.showMessageDialog(null, displayedText);
+                    String displayedText;
+                    int predictedDigit = predictDigit(selectedFile);
+                    if (predictedDigit > -1) {
+                        displayedText = "Predicted Digit: " + predictedDigit;
+                    } else {
+                        displayedText = "couldn't predict number";
                     }
-                } else {
-                    JOptionPane.showMessageDialog(null, "Please upload an image first.");
+                    JOptionPane.showMessageDialog(null, displayedText);
                 }
+
+                else {
+                JOptionPane.showMessageDialog(null, "Please upload an image first.");
             }
+        }
         });
 
         setVisible(true);
@@ -114,10 +165,10 @@ public class DigitRecognizerGUI extends JFrame {
     }
 
     // Predict digit from uploaded image
-    private double[] predictDigit(File file) {
-        double[] predictions = new double[11];
+    private int predictDigit(File file) {
+        double[] scores = new double[10];
         try {
-            BufferedImage img = ImageIO.read(file);
+            BufferedImage img = centerDigit(ImageIO.read(file));
             double[] features = extractFeatures(img);
             int bestDigit = -1;
             double bestScore = Double.NEGATIVE_INFINITY;
@@ -125,19 +176,18 @@ public class DigitRecognizerGUI extends JFrame {
             for (int digit = 0; digit < 10; digit++) {
                 double[] hiddenLayer = new double[perceptrons[digit].GetHiddenSize()];
                 double score = perceptrons[digit].forward(features, hiddenLayer);
-
-                predictions[digit] = score;
-
-                if (score ==1) {
-                    System.out.println("score for " + digit + ": " + score);
+                scores[digit] = score;
+                if (score > bestScore){
+                    bestScore = score;
+                    bestDigit = digit;
                 }
             }
+            printSortedIndexValueMap(scores);
 
-            return predictions;
+            return bestDigit;
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(null, "Error processing image.");
-            predictions[0] = -1;
-            return predictions;
+            return -1;
         }
     }
 
@@ -170,12 +220,10 @@ public class DigitRecognizerGUI extends JFrame {
             }
         }
         BufferedImage recreatedImage = recreateImage(features, 28, 28);
-        File output = new File("recreated_image.png");
+        File output = new File("recreated_image_gui.png");
         ImageIO.write(recreatedImage, "png", output);
         return features;
     }
-
-
 
 
     public static void main(String[] args) {
